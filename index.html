@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>6-Week Cut Tracker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    .day.checked {
+      background-color: #4ade80;
+      animation: pop 0.4s ease;
+    }
+    @keyframes pop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-10">
+  <h1 class="text-3xl font-bold mb-6">6-Week Cut Tracker</h1>
+  <div class="flex flex-col gap-6" id="tracker"></div>
+
+  <!-- Modal -->
+  <div id="modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-96 space-y-4">
+      <h2 class="text-xl font-semibold">Daily Check-In</h2>
+      <div>
+        <label class="block mb-1">Did you close all of your rings?</label>
+        <select id="rings" class="w-full border rounded p-2">
+          <option value="">Select</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+      <div>
+        <label class="block mb-1">Did you hit your calorie and protein goal?</label>
+        <select id="macros" class="w-full border rounded p-2">
+          <option value="">Select</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select>
+      </div>
+      <div>
+        <label class="block mb-1">Upload a photo (optional)</label>
+        <input type="file" id="photoUpload" accept="image/*" class="w-full" />
+      </div>
+      <div class="flex justify-end space-x-4">
+        <button id="cancelBtn" class="bg-gray-300 hover:bg-gray-400 text-black font-semibold py-1 px-4 rounded">Cancel</button>
+        <button id="submitBtn" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 rounded">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const tracker = document.getElementById('tracker');
+      const totalDays = 6 * 7;
+      const savedState = JSON.parse(localStorage.getItem('cutDays') || '[]');
+      const startDate = new Date('2025-05-12');
+      let currentDay = null;
+
+      const modal = document.getElementById('modal');
+      const ringsInput = document.getElementById('rings');
+      const macrosInput = document.getElementById('macros');
+      const photoUpload = document.getElementById('photoUpload');
+      const cancelBtn = document.getElementById('cancelBtn');
+      const submitBtn = document.getElementById('submitBtn');
+
+      cancelBtn.onclick = () => {
+        modal.classList.add('hidden');
+        clearModal();
+      };
+
+      submitBtn.onclick = () => {
+        if (ringsInput.value !== 'yes' || macrosInput.value !== 'yes') {
+          alert('Please complete both goals to check off the day.');
+          return;
+        }
+
+        if (photoUpload.files.length > 0) {
+          console.log('Photo uploaded:', photoUpload.files[0].name);
+        }
+
+        currentDay.classList.add('checked');
+        const newState = Array.from(document.querySelectorAll('.day.checked')).map(d => parseInt(d.firstChild.textContent) - 1);
+        localStorage.setItem('cutDays', JSON.stringify(newState));
+
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+
+        modal.classList.add('hidden');
+        clearModal();
+      };
+
+      function clearModal() {
+        ringsInput.value = '';
+        macrosInput.value = '';
+        photoUpload.value = '';
+        currentDay = null;
+      }
+
+      for (let week = 0; week < 6; week++) {
+        const weekWrapper = document.createElement('div');
+
+        const weekTitle = document.createElement('h2');
+        weekTitle.className = 'text-xl font-semibold mb-2';
+        weekTitle.textContent = `Week ${week + 1}`;
+        weekWrapper.appendChild(weekTitle);
+
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-7 gap-4';
+
+        for (let i = 0; i < 7; i++) {
+          const index = week * 7 + i;
+          const day = document.createElement('div');
+          day.className = 'day w-16 h-16 flex flex-col items-center justify-center bg-white shadow-md cursor-pointer rounded-lg text-sm';
+
+          const dayNumber = document.createElement('div');
+          dayNumber.textContent = index + 1;
+          dayNumber.className = 'font-bold';
+
+          const date = new Date(startDate);
+          date.setDate(startDate.getDate() + index);
+          const dateText = document.createElement('div');
+          dateText.textContent = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+          dateText.className = 'text-gray-500 text-xs';
+
+          day.appendChild(dayNumber);
+          day.appendChild(dateText);
+
+          if (savedState.includes(index)) {
+            day.classList.add('checked');
+          }
+
+          day.addEventListener('click', () => {
+            if (day.classList.contains('checked')) {
+              day.classList.remove('checked');
+              const newState = Array.from(document.querySelectorAll('.day.checked')).map(d => parseInt(d.firstChild.textContent) - 1);
+              localStorage.setItem('cutDays', JSON.stringify(newState));
+            } else {
+              currentDay = day;
+              modal.classList.remove('hidden');
+            }
+          });
+
+          row.appendChild(day);
+        }
+
+        weekWrapper.appendChild(row);
+        tracker.appendChild(weekWrapper);
+      }
+    })();
+  </script>
+</body>
+</html>
